@@ -1,4 +1,5 @@
 import unicode
+from math import round
 
 ## Drawille is a way to draw monocolor pixel graphics in the terminal with higher
 ## resolution than the size of a single character. It works by using the 2x4
@@ -8,9 +9,13 @@ import unicode
 ## there are implemented while some new functionality is added.
 
 type
-  Canvas* = object
+  Canvas* = object of RootObj
     ## A standard canvas object
     grid*: seq[seq[uint8]]
+  Colour* = object
+    red*, green*, blue*: uint8
+  ColourCanvas = object of Canvas
+    colours*: seq[seq[Colour]]
   LayeredCanvas* = object
     ## A canvas with multiple layers
     canvases*: seq[Canvas]
@@ -35,15 +40,30 @@ proc newCanvas*(w, h: int): Canvas =
   for i in 0..<w:
     result.grid[i] = newSeq[uint8](h)
 
+proc newColourCanvas*(w, h: int): ColourCanvas =
+  result.grid = newSeq[seq[uint8]](w)
+  for i in 0..<w:
+    result.grid[i] = newSeq[uint8](h)
+  result.colours = newSeq[seq[Colour]](w*2)
+  for i in 0..<w*2:
+    result.colours[i] = newSeq[Colour](h*4)
+
 proc get*(c: Canvas, x, y: int): bool =
   ## Checks if a dot is set on the canvas at position x, y
   let d = getDot(x, y)
   return (c.grid[d.cx][d.cy] and d.dot) != 0
 
+proc get*(c: ColourCanvas, x, y: int): bool =
+  c.Canvas.get(x, y)
+
 proc set*(c: var Canvas, x, y: int) =
   ## Set a dot on the canvas at position x, y
   let d = getDot(x, y)
   c.grid[d.cx][d.cy] = c.grid[d.cx][d.cy] or d.dot
+
+proc set*(c: var ColourCanvas, x, y: int, colour: Colour) =
+  c.Canvas.set(x, y)
+  c.colours[x][y] = colour
 
 proc unset*(c: var Canvas, x, y: int) =
   ## Unset a dot on the canvas at position x, y
@@ -55,17 +75,31 @@ proc toggle*(c: var Canvas, x, y: int) =
   let d = getDot(x, y)
   c.grid[d.cx][d.cy] = c.grid[d.cx][d.cy] xor d.dot
 
+proc toggle*(c: var ColourCanvas, x, y: int, colour: Colour) =
+  c.Canvas.toggle(x, y)
+  c.colours[x][y] = colour
+
 proc fill*(c: var Canvas, x1, y1, x2, y2: int) =
   ## Sets the entire region from x1, y1 to x2, y2
   for x in min(x1,x2)..max(x1,x2):
     for y in min(y1,y2)..max(y1,y2):
       c.set(x, y)
 
+proc fill*(c: var ColourCanvas, x1, y1, x2, y2: int, colour: Colour) =
+  for x in min(x1,x2)..max(x1,x2):
+    for y in min(y1,y2)..max(y1,y2):
+      c.set(x, y, colour)
+
 proc toggle*(c: var Canvas, x1, y1, x2, y2: int) =
   ## Toggles the entire region from x1, y1, to x2, y2
   for x in min(x1,x2)..max(x1,x2):
     for y in min(y1,y2)..max(y1,y2):
       c.toggle(x, y)
+
+proc toggle*(c: var ColourCanvas, x1, y1, x2, y2: int, colour: Colour) =
+  for x in min(x1,x2)..max(x1,x2):
+    for y in min(y1,y2)..max(y1,y2):
+      c.toggle(x, y, colour)
 
 proc clear*(c: var Canvas, x1, y1, x2, y2: int) =
   ## Unsets the entire region from x1, y1, to x2, y2
@@ -79,6 +113,9 @@ proc clear*(c: var Canvas) =
     for i in 0..c.grid.high:
       c.grid[i][j] = 0
 
+proc clear*(c: var ColourCanvas) =
+  c.Canvas.clear()
+
 proc drawLine*(c: var Canvas, x1, y1, x2, y2: int) =
   ## Draws a line from x1, y1 to x2, y2
   let
@@ -88,6 +125,14 @@ proc drawLine*(c: var Canvas, x1, y1, x2, y2: int) =
     let y = y1 + dy * (x - x1) div dx
     c.set(x, y)
 
+proc drawLine*(c: var ColourCanvas, x1, y1, x2, y2: int, colour: Colour) =
+  let
+    dx = x1 - x2
+    dy = y1 - y2
+  for x in min(x1,x2)..max(x1,x2):
+    let y = y1 + dy * (x - x1) div dx
+    c.set(x, y, colour)
+
 proc toggleLine*(c: var Canvas, x1, y1, x2, y2: int) =
   ## Toggles all dots on a line from x1, y1 to x2, y2
   let
@@ -96,6 +141,14 @@ proc toggleLine*(c: var Canvas, x1, y1, x2, y2: int) =
   for x in min(x1,x2)..max(x1,x2):
     let y = y1 + dy * (x - x1) div dx
     c.toggle(x, y)
+
+proc toggleLine*(c: var ColourCanvas, x1, y1, x2, y2: int, colour: Colour) =
+  let
+    dx = x1 - x2
+    dy = y1 - y2
+  for x in min(x1,x2)..max(x1,x2):
+    let y = y1 + dy * (x - x1) div dx
+    c.toggle(x, y, colour)
 
 proc `$`*(c: Canvas): string =
   ## Outputs the entire buffer as the actual braille characters
@@ -107,6 +160,40 @@ proc `$`*(c: Canvas): string =
     for i in 0..c.grid.high:
       result.add Rune(0x2800 or c.grid[i][j].int).toUTF8
 
+proc `$`*(c: ColourCanvas): string =
+  result = ""
+  var colours = newSeq[seq[uint8]](c.grid.len)
+  for i in 0..colours.high:
+    colours[i] = newSeq[uint8](c.grid[0].len)
+  for j in 0..c.grid[0].high:
+    for i in 0..c.grid.high:
+      # This averaging is a bit bugged
+      var
+        colour = Colour(red: 0, green: 0, blue: 0)
+        dots = 0'u8
+      for q in 0..<2:
+        for x in 0..<4:
+          if c.get(i*2+q, j*4+x):
+            dots+=1
+            let ctoadd = c.colours[i*2+q][j*4+x]
+            colour.red += ctoadd.red
+            colour.green += ctoadd.green
+            colour.blue += ctoadd.blue
+      if dots != 0:
+        colour.red = colour.red div dots
+        colour.green = colour.green div dots
+        colour.blue = colour.blue div dots
+      var
+        ired = if colour.red < 47: 0 else: 1 + max(round((colour.red - 95).int / 40).int, 0)
+        igreen = if colour.green < 47: 0 else: 1 + max(round((colour.green - 95).int / 40).int, 0)
+        iblue = if colour.blue < 47: 0 else: 1 + max(round((colour.blue - 95).int / 40).int, 0)
+      colours[i][j] = (ired*6*6+igreen*6+iblue).uint8
+  for j in 0..c.grid[0].high:
+    if j != 0: result.add "\n"
+    for i in 0..c.grid.high:
+      result.add "\x1b[38;5;" & $colours[i][j] & "m"
+      result.add Rune(0x2800 or c.grid[i][j].int).toUTF8
+  result.add "\e[0m"
 
 proc newLayeredCanvas*(w, h, layers: int): LayeredCanvas =
   ## Creates a new layered canvas. This is useful to avoid clearing
@@ -164,7 +251,7 @@ proc clear*(c: var LayeredCanvas, x1, y1, x2, y2, layer: int) =
   c.canvases[layer].clear(x1, y1, x2, y2)
 
 proc clear*(c: var LayeredCanvas, x1, y1, x2, y2: int) =
-  ## Same as for a regular canvas, but for all layers 
+  ## Same as for a regular canvas, but for all layers
   for layer in 0..c.canvases.high:
     c.canvases[layer].clear(x1, y1, x2, y2)
 
