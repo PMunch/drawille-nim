@@ -16,7 +16,7 @@ for j in 0..int.high:
   # ANSI codes to go clear the area we use for our drawing
   echo "\r" & "\e[A\e[K".repeat(height+2)
   # Fill a region
-  c.fill((width)-1,(height)*2-1,(width)*2-1,(height)*4-1, Colour(red: 100, blue: 100, green: 0))
+  c.fill((width)-1,(height)*2-1,(width)*2-1,(height)*4-1, Colour(red: 100, blue: 240, green: 0))
   # Draw a nice sine curve
   for i in 0..<(width*2):
     c.toggle(i, height*2+(degToRad(((i+j)*4).float).sin*(height*2-1).float).int, Colour(red: 240, blue: 40, green: 40))

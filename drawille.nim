@@ -169,25 +169,25 @@ proc `$`*(c: ColourCanvas): string =
     for i in 0..c.grid.high:
       # This averaging is a bit bugged
       var
-        colour = Colour(red: 0, green: 0, blue: 0)
+        red, green, blue = 0
         dots = 0'u8
       for q in 0..<2:
         for x in 0..<4:
           if c.get(i*2+q, j*4+x):
             dots+=1
             let ctoadd = c.colours[i*2+q][j*4+x]
-            colour.red += ctoadd.red
-            colour.green += ctoadd.green
-            colour.blue += ctoadd.blue
+            red += ctoadd.red.int
+            green += ctoadd.green.int
+            blue += ctoadd.blue.int
       if dots != 0:
-        colour.red = colour.red div dots
-        colour.green = colour.green div dots
-        colour.blue = colour.blue div dots
+        red = red div dots.int
+        green = green div dots.int
+        blue = blue div dots.int
       var
-        ired = if colour.red < 47: 0 else: 1 + max(round((colour.red - 95).int / 40).int, 0)
-        igreen = if colour.green < 47: 0 else: 1 + max(round((colour.green - 95).int / 40).int, 0)
-        iblue = if colour.blue < 47: 0 else: 1 + max(round((colour.blue - 95).int / 40).int, 0)
-      colours[i][j] = (ired*6*6+igreen*6+iblue).uint8
+        ired = if red < 47: 0 else: 1 + max(round((red - 95) / 40).int, 0)
+        igreen = if green < 47: 0 else: 1 + max(round((green - 95) / 40).int, 0)
+        iblue = if blue < 47: 0 else: 1 + max(round((blue - 95) / 40).int, 0)
+      colours[i][j] = (16+ired*6*6+igreen*6+iblue).uint8
   for j in 0..c.grid[0].high:
     if j != 0: result.add "\n"
     for i in 0..c.grid.high:
