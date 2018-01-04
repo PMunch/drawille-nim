@@ -1,4 +1,4 @@
-import "/home/peter/div/drawille-nim/drawille"
+import "../drawille"
 import math
 import strutils
 import os
