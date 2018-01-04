@@ -2,25 +2,28 @@ import "/home/peter/div/drawille-nim/drawille"
 import math
 import strutils
 import os
-import threadpool
+import osproc
+import random
 
 type WinSize = object
   row, col, xpixel, ypixel: cushort
 
 const TIOCGWINSZ = 0x5413
+const I_NREAD = 0x5301
+const FIONREAD = 0x541b
 
-proc ioctl(fd: cint, request: culong, argp: pointer)
+proc ioctl(fd: cint, request: culong, argp: pointer): cint
   {.importc, header: "<sys/ioctl.h>".}
 
 var size: WinSize
-ioctl(0, TIOCGWINSZ, addr size)
+discard ioctl(0, TIOCGWINSZ, addr size)
 echo size
 echo size.col
 
 # Set an arbitrary width and height
 let
-  width = 50#size.col.int
-  height = 20#size.row.int - 1
+  width = size.col.int
+  height = size.row.int - 1
 
 # Create a new canvas and write it to the screen
 var c = newCanvas(width, height)
@@ -98,8 +101,8 @@ c.set(sx+2,sy+2)
 #c.set(30,20)
 
 var
-  buf = " "
-  flowVar = spawn stdin.readBuffer(buf.addr, 1)
+  paused = false
+  step = false
 
 for j in 0..int.high:
   # ANSI codes to go clear the area we use for our drawing
@@ -107,44 +110,64 @@ for j in 0..int.high:
   # Draw the canvas
   echo c
   # Do life
-  var changes = newSeq[tuple[x: int, y: int, dead: bool]]()
-  var wx, wy: int
-  for x in 0..<width*2:
-    for y in 0..<height*4:
-      var alive =
+  if not paused or step:
+    var changes = newSeq[tuple[x: int, y: int, dead: bool]]()
+    var wx, wy: int
+    for x in 0..<width*2:
+      for y in 0..<height*4:
+        var alive =
+          if c.get(x, y):
+            -1
+          else:
+            0
+        for nx in (x-1)..(x+1):
+          wx = nx
+          if nx<0:
+            wx = width*2+nx
+          wx = wx mod (width*2)
+          for ny in (y-1)..(y+1):
+            wy = ny
+            if ny<0:
+              wy = height*4+ny
+            wy = wy mod (height*4)
+            if c.get(wx, wy):
+              alive+=1
         if c.get(x, y):
-          -1
+          if alive < 2 or alive > 3:
+            changes.add((x: x, y: y, dead: true))
         else:
-          0
-      for nx in (x-1)..(x+1):
-        wx = nx
-        if nx<0:
-          wx = width*2+nx
-        wx = wx mod (width*2)
-        for ny in (y-1)..(y+1):
-          wy = ny
-          if ny<0:
-            wy = height*4+ny
-          wy = wy mod (height*4)
-          if c.get(wx, wy):
-            alive+=1
-      if c.get(x, y):
-        if alive < 2 or alive > 3:
-          changes.add((x: x, y: y, dead: true))
+          if alive == 3:
+            changes.add((x: x, y: y, dead: false))
+
+    for change in changes:
+      if change.dead:
+        c.unset(change.x, change.y)
       else:
-        if alive == 3:
-          changes.add((x: x, y: y, dead: false))
+        c.set(change.x, change.y)
+    step = false
 
-  for change in changes:
-    if change.dead:
-      c.unset(change.x, change.y)
-    else:
-      c.set(change.x, change.y)
+  discard execCmd("stty raw")
+  var n:cint = 0
+  if (ioctl(0, FIONREAD, n.addr) == 0 and n > 0):
+    var buf = newString(n)
+    if stdin.readBuffer(buf[0].addr, n) == n:
+      for i in 0..<n:
+        case buf[i]:
+        of 'q':
+          discard execCmd("stty cooked")
+          quit(0)
+        of 'p':
+          paused = not paused
+        of 's':
+          step = true
+        of 'c':
+          for x in 0..<width*2:
+            for y in 0..<height*4:
+              if random(10) == 0:
+                c.set(x, y)
+        else:
+          discard
+  discard execCmd("stty cooked")
 
-  if flowVar.isReady():
-    quit(10)
-    if buf == "q":
-      quit(10)
-    flowVar = spawn stdin.readBuffer(buf.addr, 1)
   sleep(100)
 
