@@ -56,6 +56,10 @@ proc get*(c: Canvas, x, y: int): bool =
 proc get*(c: ColourCanvas, x, y: int): bool =
   c.Canvas.get(x, y)
 
+proc getColour*(c: ColourCanvas, x, y: int): Colour =
+  if c.get(x, y):
+    return c.colours[x][y]
+
 proc set*(c: var Canvas, x, y: int) =
   ## Set a dot on the canvas at position x, y
   let d = getDot(x, y)

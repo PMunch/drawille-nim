@@ -26,22 +26,22 @@ let
   height = size.row.int - 1
 
 # Create a new canvas and write it to the screen
-var c = newCanvas(width, height)
+var c = newColourCanvas(width, height)
 echo c
 
 var sx, sy: int
 sx = 10
 sy = 10
-c.set(sx,sy+5)
-c.set(sx+2, sy+4)
-c.set(sx+2, sy+5)
-c.set(sx+4, sy+3)
-c.set(sx+4, sy+2)
-c.set(sx+4, sy+1)
-c.set(sx+6, sy)
-c.set(sx+6, sy+1)
-c.set(sx+6, sy+2)
-c.set(sx+7, sy+1)
+c.set(sx,sy+5, Colour(red: 255, green: 0, blue: 0))
+c.set(sx+2, sy+4, Colour(red: 255, green: 0, blue: 0))
+c.set(sx+2, sy+5, Colour(red: 255, green: 0, blue: 0))
+c.set(sx+4, sy+3, Colour(red: 255, green: 0, blue: 0))
+c.set(sx+4, sy+2, Colour(red: 255, green: 0, blue: 0))
+c.set(sx+4, sy+1, Colour(red: 255, green: 0, blue: 0))
+c.set(sx+6, sy, Colour(red: 255, green: 0, blue: 0))
+c.set(sx+6, sy+1, Colour(red: 255, green: 0, blue: 0))
+c.set(sx+6, sy+2, Colour(red: 255, green: 0, blue: 0))
+c.set(sx+7, sy+1, Colour(red: 255, green: 0, blue: 0))
 #[
 sx = 200
 sy = 100
@@ -103,18 +103,21 @@ c.set(sx+2,sy+2)
 var
   paused = false
   step = false
-
+  #output = open("output.txt", fmWrite)
 for j in 0..int.high:
   # ANSI codes to go clear the area we use for our drawing
   stdout.write "\e[A\e[K".repeat(height)
   # Draw the canvas
   echo c
+  #output.write(c)
+  #output.write("-".repeat(width))
   # Do life
   if not paused or step:
-    var changes = newSeq[tuple[x: int, y: int, dead: bool]]()
+    var changes = newSeq[tuple[x: int, y: int, dead: bool, colour: Colour]]()
     var wx, wy: int
     for x in 0..<width*2:
       for y in 0..<height*4:
+        var red, green, blue: int = 0
         var alive =
           if c.get(x, y):
             -1
@@ -132,18 +135,22 @@ for j in 0..int.high:
             wy = wy mod (height*4)
             if c.get(wx, wy):
               alive+=1
+              let col = c.getColour(wx, wy)
+              red += col.red.int
+              green += col.green.int
+              blue += col.blue.int
         if c.get(x, y):
           if alive < 2 or alive > 3:
-            changes.add((x: x, y: y, dead: true))
+            changes.add((x: x, y: y, dead: true, colour: Colour(red: 0, green: 0, blue: 0)))
         else:
           if alive == 3:
-            changes.add((x: x, y: y, dead: false))
+            changes.add((x: x, y: y, dead: false, colour: Colour(red: (red div alive).uint8, green: (green div alive).uint8, blue: (blue div alive).uint8)))
 
     for change in changes:
       if change.dead:
         c.unset(change.x, change.y)
       else:
-        c.set(change.x, change.y)
+        c.set(change.x, change.y, change.colour)
     step = false
 
   discard execCmd("stty raw")
@@ -155,6 +162,8 @@ for j in 0..int.high:
         case buf[i]:
         of 'q':
           discard execCmd("stty cooked")
+          stdout.write "\e[A\e[K".repeat(height)
+          #output.close()
           quit(0)
         of 'p':
           paused = not paused
@@ -164,10 +173,9 @@ for j in 0..int.high:
           for x in 0..<width*2:
             for y in 0..<height*4:
               if random(10) == 0:
-                c.set(x, y)
+                c.set(x, y, Colour(red: random(255).uint8, green: random(255).uint8, blue: random(255).uint8))
         else:
           discard
   discard execCmd("stty cooked")
 
   sleep(100)
-
