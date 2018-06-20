@@ -142,17 +142,31 @@ proc toggleLine*(c: var Canvas, x1, y1, x2, y2: int) =
   let
     dx = x1 - x2
     dy = y1 - y2
-  for x in min(x1,x2)..max(x1,x2):
-    let y = y1 + dy * (x - x1) div dx
-    c.toggle(x, y)
+  if dx != 0:
+    for x in min(x1,x2)..max(x1,x2):
+      let y = y1 + dy * (x - x1) div dx
+      c.toggle(x, y)
+  elif dy != 0:
+    for y in min(y1,y2)..max(y1,y2):
+      let x = x1 + dx * (y - y1) div dy
+      c.toggle(x, y)
+  else:
+    c.toggle(x1, y1)
 
 proc toggleLine*(c: var ColourCanvas, x1, y1, x2, y2: int, colour: Colour) =
   let
     dx = x1 - x2
     dy = y1 - y2
-  for x in min(x1,x2)..max(x1,x2):
-    let y = y1 + dy * (x - x1) div dx
-    c.toggle(x, y, colour)
+  if dx != 0:
+    for x in min(x1,x2)..max(x1,x2):
+      let y = y1 + dy * (x - x1) div dx
+      c.toggle(x, y, colour)
+  elif dy != 0:
+    for y in min(y1,y2)..max(y1,y2):
+      let x = x1 + dx * (y - y1) div dy
+      c.toggle(x, y, colour)
+  else:
+    c.toggle(x1, y1, colour)
 
 proc `$`*(c: Canvas): string =
   ## Outputs the entire buffer as the actual braille characters
