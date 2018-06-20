@@ -24,7 +24,7 @@ for j in 0..int.high:
     c.toggleLine(i, newHeight, i, lastHeight + 1*sgn(newHeight-lastHeight), Colour(red: 240, blue: 40, green: 40))
     lastHeight = newHeight
   # And a line to trace the end of it
-  c.toggleLine(0, height*2, width*2-1, height*2+(degToRad((((width*2-1)+j)*4).float).sin*(height*2-1).float).int, Colour(red: 40, blue: 240, green: 40))
+  c.toggleLine(0, height*2, width*2-1, lastHeight, Colour(red: 40, blue: 240, green: 40))
 
   # Check for collision, then draw the dot
   stdout.write "Something collides with green dot: " & $c.get(10,height)
