@@ -1,9 +1,7 @@
-proc toHsv(rgb: tuple[red, green, blue: uint8]): tuple[hue, saturation, value: uint8] =
+proc toHsv*(rgb: tuple[red, green, blue: uint8]): tuple[hue, saturation, value: uint8] =
   var
     rgbMin = if rgb.red < rgb.green: (if rgb.red < rgb.blue: rgb.red else: rgb.blue) else: (if rgb.green < rgb.blue: rgb.green else: rgb.blue)
     rgbMax = if rgb.red > rgb.green: (if rgb.red > rgb.blue: rgb.red else: rgb.blue) else: (if rgb.green > rgb.blue: rgb.green else: rgb.blue)
-  echo rgbMin
-  echo rgbMax
 
   result.value = rgbMax.uint8
   if result.value == 0:
@@ -23,7 +21,7 @@ proc toHsv(rgb: tuple[red, green, blue: uint8]): tuple[hue, saturation, value: u
   else:
     result.hue = (171 + (43 * (rgb.red - rgb.green).int) div (rgbMax - rgbMin).int).uint8
 
-proc toRgb(hsv: tuple[hue, saturation, value: uint8]): tuple[red, green, blue: uint8] =
+proc toRgb*(hsv: tuple[hue, saturation, value: uint8]): tuple[red, green, blue: uint8] =
   if hsv.saturation == 0:
     result.red = hsv.value
     result.green = hsv.value
@@ -31,11 +29,11 @@ proc toRgb(hsv: tuple[hue, saturation, value: uint8]): tuple[red, green, blue: u
     return result
 
   var
-    region = hsv.value div 43
-    remainder = (hsv.value - (region * 43)) * 6
-    p = (hsv.value * (255'u8 - hsv.saturation)) shr 8
-    q = (hsv.value * (255'u8 - ((hsv.saturation * remainder) shr 8))) shr 8
-    t = (hsv.value * (255'u8 - ((hsv.saturation * (255'u8 - remainder)) shr 8))) shr 8
+    region = hsv.hue div 43
+    remainder = (hsv.hue.int - (region.int * 43)) * 6
+    p = ((hsv.value.int * (255 - hsv.saturation.int)) shr 8).uint8
+    q = ((hsv.value.int * (255 - ((hsv.saturation.int * remainder) shr 8))) shr 8).uint8
+    t = ((hsv.value.int * (255 - ((hsv.saturation.int * (255 - remainder)) shr 8))) shr 8).uint8
 
   case region:
   of 0:
@@ -67,6 +65,8 @@ when isMainModule:
   var
     rgbColour = (red: 75'u8, green: 20'u8, blue: 200'u8)
     hsvColour = rgbColour.toHsv()
+  hsvColour.saturation += 20
+  var
     rgbColour2 = hsvColour.toRgb()
   echo "h: " & $hsvColour.hue & ", s: " & $hsvColour.saturation & ", v: " & $hsvColour.value
   echo "r: " & $rgbColour.red & ", g: " & $rgbColour.green & ", b: " & $rgbColour.blue

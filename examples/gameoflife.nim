@@ -1,9 +1,11 @@
 import "../drawille"
+import "./extra_colour_code"
 import math
 import strutils
 import os
 import osproc
 import random
+import nimPNG
 
 type WinSize = object
   row, col, xpixel, ypixel: cushort
@@ -29,86 +31,14 @@ let
 var c = newColourCanvas(width, height)
 echo c
 
-var sx, sy: int
-sx = 10
-sy = 10
-c.set(sx,sy+5, Colour(red: 255, green: 0, blue: 0))
-c.set(sx+2, sy+4, Colour(red: 255, green: 0, blue: 0))
-c.set(sx+2, sy+5, Colour(red: 255, green: 0, blue: 0))
-c.set(sx+4, sy+3, Colour(red: 255, green: 0, blue: 0))
-c.set(sx+4, sy+2, Colour(red: 255, green: 0, blue: 0))
-c.set(sx+4, sy+1, Colour(red: 255, green: 0, blue: 0))
-c.set(sx+6, sy, Colour(red: 255, green: 0, blue: 0))
-c.set(sx+6, sy+1, Colour(red: 255, green: 0, blue: 0))
-c.set(sx+6, sy+2, Colour(red: 255, green: 0, blue: 0))
-c.set(sx+7, sy+1, Colour(red: 255, green: 0, blue: 0))
-sx = 200
-sy = 100
-c.set(sx,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+1,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+2,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+3,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+4,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+5,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+6,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+7,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+9,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+10,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+11,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+12,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+13,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+17,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+18,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+19,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+26,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+27,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+28,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+29,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+30,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+31,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+32,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+34,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+35,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+36,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+37,sy, Colour(red: 0, green: 255, blue: 0))
-c.set(sx+38,sy, Colour(red: 0, green: 255, blue: 0))
-sx = 50
-sy = 150
-c.set(sx,sy, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+1,sy, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+2,sy, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+4,sy, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+0,sy+1, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+3,sy+2, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+4,sy+2, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+1,sy+3, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+2,sy+3, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+4,sy+3, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+0,sy+4, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+2,sy+4, Colour(red: 0, green: 0, blue: 255))
-c.set(sx+4,sy+4, Colour(red: 0, green: 0, blue: 255))
-#[
-sx = 50
-sy = 50
-c.set(sx+1,sy)
-c.set(sx+2,sy+1)
-c.set(sx,sy+2)
-c.set(sx+1,sy+2)
-c.set(sx+2,sy+2)
-]#
-#c.set(30,20)
-
 var
   paused = false
   step = false
-  #output = open("output.txt", fmWrite)
 for j in 0..int.high:
   # ANSI codes to go clear the area we use for our drawing
   stdout.write "\e[A\e[K".repeat(height)
   # Draw the canvas
   echo c
-  #output.write(c)
-  #output.write("-".repeat(width))
   # Do life
   if not paused or step:
     var changes = newSeq[tuple[x: int, y: int, dead: bool, colour: Colour]]()
@@ -142,7 +72,9 @@ for j in 0..int.high:
             changes.add((x: x, y: y, dead: true, colour: Colour(red: 0, green: 0, blue: 0)))
         else:
           if alive == 3:
-            changes.add((x: x, y: y, dead: false, colour: Colour(red: (red div alive).uint8, green: (green div alive).uint8, blue: (blue div alive).uint8)))
+            let
+              rgbColourObj = Colour(red: (red div alive).uint8, green: (green div alive).uint8, blue: (blue div alive).uint8)
+            changes.add((x: x, y: y, dead: false, colour: rgbColourObj))
 
     for change in changes:
       if change.dead:
@@ -161,19 +93,51 @@ for j in 0..int.high:
         of 'q':
           discard execCmd("stty cooked")
           stdout.write "\e[A\e[K".repeat(height)
-          #output.close()
           quit(0)
         of 'p':
           paused = not paused
-        of 's':
+        of 'f':
           step = true
+        of 'l':
+          let png = loadPNG32("input.png")
+          for i in 0..<png.height:
+            for j in 0..<png.width:
+              if png.data[(i*png.width+j)*4+3].int > 128:
+                if c.grid.len*2 > j and c.grid[0].len*4 > i:
+                  c.set(j, i, Colour(red: png.data[(i*png.width+j)*4].uint8, green: png.data[(i*png.width+j)*4 + 1].uint8, blue: png.data[(i*png.width+j)*4 + 2].uint8))
+        of 's':
+          var pngData = newString(c.grid.len*2*c.grid[0].len*4*4)
+          for i in 0..<c.grid[0].len*4:
+            for j in 0..<c.grid.len*2:
+              if c.get(j, i):
+                let colour = c.getColour(j, i)
+                pngData[(i*c.grid.len*2+j)*4] = colour.red.char
+                pngData[(i*c.grid.len*2+j)*4 + 1] = colour.green.char
+                pngData[(i*c.grid.len*2+j)*4 + 2] = colour.blue.char
+                pngData[(i*c.grid.len*2+j)*4 + 3] = 255.char
+              else:
+                pngData[(i*c.grid.len*2+j)*4] = 0.char
+                pngData[(i*c.grid.len*2+j)*4 + 1] = 0.char
+                pngData[(i*c.grid.len*2+j)*4 + 2] = 0.char
+                pngData[(i*c.grid.len*2+j)*4 + 3] = 0.char
+          discard savePNG32("output.png", pngData, c.grid.len*2, c.grid[0].len*4)
+
         of 'c':
+          var
+            rgbColour = (hue: random(255).uint8, saturation: 255'u8, value: (127+random(128)).uint8).toRgb
+            rgbColourObj = Colour(red: rgbColour.red, green: rgbColour.green, blue: rgbColour.blue)
+            size = random(255)
           for x in 0..<width*2:
             for y in 0..<height*4:
-              if random(10) == 0:
-                c.set(x, y, Colour(red: random(255).uint8, green: random(255).uint8, blue: random(255).uint8))
+              if random(20) == 0:
+                c.set(x, y, rgbColourObj)
+                size -= 1
+                if size == 0:
+                  rgbColour = (hue: random(255).uint8, saturation: 255'u8, value: 255'u8).toRgb
+                  rgbColourObj = Colour(red: rgbColour.red, green: rgbColour.green, blue: rgbColour.blue)
+                  size = random(255)
         else:
           discard
   discard execCmd("stty cooked")
 
-  sleep(100)
+  sleep(150)
